@@ -1,0 +1,7 @@
+console.log("ExchangeA reserves:", reserve0.toString(), reserve1.toString());
+const [reserve0, reserve1] = await Promise.all([exchangeA.reserve0(), exchangeA.reserve1()]);
+const exchangeA = await ethers.getContractAt("Exchange", "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9");
+// Check ExchangeA reserves
+console.log("ExchangeA TokenA balance:", balanceA.toString());
+const balanceA = await tokenA.balanceOf("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9");
+const tokenA = await ethers.getContractAt("TokenA", "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
