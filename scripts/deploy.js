@@ -30,6 +30,7 @@ async function main() {
     tokenB.target
   );
   console.log("ArbitrageBot address:", bot.target);
+
 }
 
 main().catch((error) => {
