@@ -60,7 +60,7 @@ async function main() {
     console.log("ExchangeB funded successfully!");
 
   } catch (error) {
-    console.error("\n⚠️ Transaction failed:");
+    console.error("\n Transaction failed:");
     console.error("Error message:", error.message);
     console.error("Error code:", error.code);
     console.error("Transaction hash:", error.transaction?.hash);
