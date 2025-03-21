@@ -52,6 +52,20 @@ contract Exchange {
     }
 
     /**
+     * @dev Calculates the output amount for a given input amount using the constant product formula
+     * @param inputToken Address of the token being sold
+     * @param amountIn Amount of input tokens to sell
+     * @return amountOut The amount of output tokens that would be received
+     */
+    function getAmountOut(address inputToken, uint256 amountIn) public view returns (uint256) {
+        require(inputToken == address(token0) || inputToken == address(token1), "Invalid token");
+        
+        (uint256 x, uint256 y) = inputToken == address(token0) ? (reserve0, reserve1) : (reserve1, reserve0);
+        uint256 amountInWithFee = (amountIn * 997) / 1000; // 0.3% fee
+        return (amountInWithFee * y) / (x + amountInWithFee);
+    }
+
+    /**
      * @dev Executes a token swap based on the AMM formula
      * @param inputToken Address of the token being sold
      * @param amountIn Amount of input tokens to sell
@@ -72,6 +86,7 @@ contract Exchange {
         // Execute the token transfers
         IERC20(inputToken).transferFrom(msg.sender, address(this), amountIn);
         IERC20(inputToken == address(token0) ? token1 : token0).transfer(msg.sender, amountOut);
+        
         
         // Update reserves based on which token was input
         if (inputToken == address(token0)) {

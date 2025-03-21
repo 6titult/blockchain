@@ -48,6 +48,64 @@ async function main() {
     tokenB.target
   );
   console.log("ArbitrageBot address:", bot.target);
+
+  // Step 4: Add initial liquidity to exchanges with different ratios
+  console.log("\nAdding initial liquidity to exchanges...");
+  
+  // Approve tokens for both exchanges
+  const liquidityAmountA1 = ethers.parseUnits("1000", 18);
+  const liquidityAmountB1 = ethers.parseUnits("3000", 18);
+  const liquidityAmountA2 = ethers.parseUnits("3000", 18);
+  const liquidityAmountB2 = ethers.parseUnits("1000", 18);
+
+  // Approve and add liquidity to Exchange A (1:3 ratio)
+  await tokenA.approve(exchangeA.target, liquidityAmountA1);
+  await tokenB.approve(exchangeA.target, liquidityAmountB1);
+  await exchangeA.addLiquidity(liquidityAmountA1, liquidityAmountB1);
+  console.log("Added liquidity to Exchange A (1:3 ratio)");
+
+  // Approve and add liquidity to Exchange B (3:1 ratio)
+  await tokenA.approve(exchangeB.target, liquidityAmountA2);
+  await tokenB.approve(exchangeB.target, liquidityAmountB2);
+  await exchangeB.addLiquidity(liquidityAmountA2, liquidityAmountB2);
+  console.log("Added liquidity to Exchange B (3:1 ratio)");
+
+  // Test arbitrage calculation with 1000 tokens
+  const testAmount = ethers.parseUnits("1000", 18);
+  
+  try {
+    // First calculate potential arbitrage
+    const [profit, direction] = await bot.calculateArbitrage(testAmount);
+    console.log("\nArbitrage Test Results:");
+    console.log("Test amount:", ethers.formatUnits(testAmount, 18), "tokens");
+    console.log("Potential profit:", ethers.formatUnits(profit, 18), "tokens");
+    console.log("Direction:", direction ? "A->B" : "B->A");
+    
+    if (profit > 0) {
+      console.log("Arbitrage opportunity found!");
+      
+      // Step 5: Perform the arbitrage if profitable
+      console.log("\nExecuting arbitrage...");
+      
+      // Approve TokenB for the bot to use
+      await tokenB.approve(bot.target, testAmount);
+      
+      // Execute the arbitrage
+      const tx = await bot.performArbitrage(testAmount);
+      const receipt = await tx.wait();
+      
+      // Get the actual profit from the transaction events
+      const actualProfit = await tokenB.balanceOf(deployer.address) - testAmount;
+      
+      console.log("Arbitrage execution completed!");
+      console.log("Transaction hash:", receipt.hash);
+      console.log("Actual profit:", ethers.formatUnits(actualProfit, 18), "tokens");
+    } else {
+      console.log("No profitable arbitrage opportunity at this time.");
+    }
+  } catch (error) {
+    console.error("Error during arbitrage:", error.message);
+  }
 }
 
 // Execute the deployment script and handle any errors

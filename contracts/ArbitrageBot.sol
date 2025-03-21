@@ -74,4 +74,69 @@ contract ArbitrageBot {
             require(finalAmount > amountIn, "No profit");
         }
     }
+
+    /**
+     * @dev Calculates potential profit for a given amount without executing the trade
+     * @param amountIn The amount of token1 to simulate arbitrage with
+     * @return profit The potential profit (in token1) from the arbitrage
+     * @return direction True if arbitrage should go A->B, False if B->A
+     */
+    function calculateArbitrage(uint256 amountIn) public view returns (uint256 profit, bool direction) {
+        uint256 priceA = exchangeA.getPrice();
+        uint256 priceB = exchangeB.getPrice();
+        
+        if (priceA > priceB) {
+            // Simulate buying from B and selling to A
+            uint256 amountOutB = exchangeB.getAmountOut(address(token1), amountIn);
+            uint256 finalAmount = exchangeA.getAmountOut(address(token0), amountOutB);
+            if (finalAmount > amountIn) {
+                return (finalAmount - amountIn, false);
+            }
+        } else if (priceB > priceA) {
+            // Simulate buying from A and selling to B
+            uint256 amountOutA = exchangeA.getAmountOut(address(token1), amountIn);
+            uint256 finalAmount = exchangeB.getAmountOut(address(token0), amountOutA);
+            if (finalAmount > amountIn) {
+                return (finalAmount - amountIn, true);
+            }
+        }
+        return (0, false); // No profitable arbitrage opportunity
+    }
+
+    /**
+     * @dev Executes arbitrage if profitable for the given amount
+     * @param amountIn The amount of token1 to perform arbitrage with
+     * @return profit The actual profit made from the arbitrage
+     */
+    function performArbitrage(uint256 amountIn) external returns (uint256 profit) {
+        (uint256 expectedProfit, bool direction) = calculateArbitrage(amountIn);
+        require(expectedProfit > 0, "No profitable arbitrage opportunity");
+
+        // Transfer tokens from user to this contract
+        token1.transferFrom(msg.sender, address(this), amountIn);
+        uint256 initialBalance = token1.balanceOf(address(this));
+
+        if (direction) {
+            // Execute A -> B arbitrage
+            token1.approve(address(exchangeA), amountIn);
+            uint256 amountOutA = exchangeA.swap(address(token1), amountIn);
+            token0.approve(address(exchangeB), amountOutA);
+            exchangeB.swap(address(token0), amountOutA);
+        } else {
+            // Execute B -> A arbitrage
+            token1.approve(address(exchangeB), amountIn);
+            uint256 amountOutB = exchangeB.swap(address(token1), amountIn);
+            token0.approve(address(exchangeA), amountOutB);
+            exchangeA.swap(address(token0), amountOutB);
+        }
+
+        // Calculate actual profit
+        uint256 finalBalance = token1.balanceOf(address(this));
+        require(finalBalance > initialBalance, "No profit made");
+        profit = finalBalance - initialBalance;
+
+        // Transfer profit back to user
+        token1.transfer(msg.sender, finalBalance);
+        return profit;
+    }
 }
